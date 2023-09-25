@@ -1,17 +1,21 @@
 
-#ifndef THREADLOCKS_HPP
-#define THREADLOCKS_HPP
+#ifndef HISSTOOLS_LIBRARY_THREAD_LOCKS_HPP
+#define HISSTOOLS_LIBRARY_THREAD_LOCKS_HPP
 
 #include <atomic>
 #include <algorithm>
 #include <chrono>
 #include <thread>
 
+#include "namespace.hpp"
+
+HISSTOOLS_LIBRARY_NAMESPACE_START()
+
 #ifdef __linux__
 
 // Linux specific definitions
 
-namespace os_specific
+namespace impl
 {
     inline void thread_nano_sleep()
     {
@@ -23,7 +27,7 @@ namespace os_specific
 
 // OSX specific definitions
 
-namespace os_specific
+namespace impl
 {
     inline void thread_nano_sleep()
     {
@@ -37,7 +41,7 @@ namespace os_specific
 
 #include <windows.h>
 
-namespace os_specific
+namespace impl
 {
     inline void thread_nano_sleep()
     {
@@ -50,7 +54,7 @@ namespace os_specific
 
 class thread_lock
 {
-    using Clock = std::chrono::steady_clock;
+    using clock = std::chrono::steady_clock;
     
 public:
     
@@ -68,14 +72,14 @@ public:
             if (attempt())
                 return;
         
-        auto timeOut = Clock::now() + std::chrono::nanoseconds(10000);
+        auto time_out = clock::now() + std::chrono::nanoseconds(10000);
         
-        while (Clock::now() < timeOut)
+        while (clock::now() < time_out)
             if (attempt())
                 return;
         
         while (!attempt())
-            os_specific::thread_nano_sleep();
+            impl::thread_nano_sleep();
     }
     
     bool attempt() { return !m_atomic_lock.test_and_set(); }
@@ -95,7 +99,7 @@ class lock_hold
 public:
     
     lock_hold() : m_lock(nullptr) {}
-    lock_hold(thread_lock *lock) : m_lock(lock) { if (m_lock) m_lock->*acquire_method(); }
+    lock_hold(thread_lock* lock) : m_lock(lock) { if (m_lock) m_lock->*acquire_method(); }
     ~lock_hold() { if (m_lock) m_lock->release(); }
     
     // Non-copyable
@@ -114,7 +118,9 @@ public:
     
 private:
     
-    thread_lock *m_lock;
+    thread_lock* m_lock;
 };
 
-#endif /* THREADLOCKS_HPP */
+HISSTOOLS_LIBRARY_NAMESPACE_END()
+
+#endif /* HISSTOOLS_LIBRARY_THREAD_LOCKS_HPP */
